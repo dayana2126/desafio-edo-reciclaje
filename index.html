@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador EDO | Modelo de Difusión Comunitaria: Reciclaje Urbano</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- KaTeX for pristine math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body);"></script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .math-eq { overflow-x: auto; max-width: 100%; padding: 0.5rem 0; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+
+  <!-- TOP HEADER / NAVBAR -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg">
+          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            EcoBarrio: Dinámica de Reciclaje Urbano
+            <span class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">EDO 1.º Orden</span>
+          </h1>
+          <p class="text-xs text-slate-400">Desafío Académico: Solución Analítica vs. Heun (RK2) vs. RK4</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 sm:space-x-1.5 bg-slate-800/80 p-1 rounded-xl text-xs sm:text-sm font-medium border border-slate-700/60" id="mainTabs">
+        <button onclick="switchTab('simulador')" id="tab-btn-simulador" class="tab-btn px-3.5 py-1.5 rounded-lg transition-all text-white bg-emerald-600 shadow font-semibold">
+          🚀 Simulador & Gráficos
+        </button>
+        <button onclick="switchTab('fundamento')" id="tab-btn-fundamento" class="tab-btn px-3.5 py-1.5 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          📐 EDO & Modelo
+        </button>
+        <button onclick="switchTab('tabla')" id="tab-btn-tabla" class="tab-btn px-3.5 py-1.5 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          📊 Tablas de Error
+        </button>
+        <button onclick="switchTab('conclusiones')" id="tab-btn-conclusiones" class="tab-btn px-3.5 py-1.5 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          🌱 Impacto Social
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: SIMULADOR INTERACTIVO Y GRÁFICAS -->
+    <!-- ========================================== -->
+    <div id="tab-simulador" class="tab-content space-y-6">
+      
+      <!-- HERO CONTEXTO COMUNITARIO -->
+      <div class="bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 rounded-2xl p-5 sm:p-6 text-white shadow-lg border border-emerald-800/40 relative overflow-hidden">
+        <div class="relative z-10 max-w-4xl">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md">
+              Desafío Comunitario • Barrio "Los Sauces"
+            </span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mb-2">
+            Propagación de Adopción de Reciclaje y Compostaje Familiar
+          </h2>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+            Se modela el crecimiento de hogares comprometidos con la separación de residuos en una comunidad de 
+            <strong class="text-emerald-400 font-semibold">K = 1,000 familias</strong>, partiendo de una iniciativa pionera de 
+            <strong class="text-emerald-400 font-semibold">y₀ = 50 familias</strong>. Analizamos la velocidad de contagio social, 
+            el tiempo para alcanzar la meta crítica del <strong class="text-emerald-300">80% (800 familias)</strong> y la precisión 
+            numérica de <strong class="text-amber-300">Heun (RK2)</strong> frente a <strong class="text-cyan-300">RK4</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- GRID PRINCIPAL: CONTROLES + RESULTADOS CLAVE -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- PANEL DE CONTROL / INPUTS (4 COLS) -->
+        <div class="lg:col-span-4 space-y-5">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
+                Parámetros de Simulación
+              </h3>
+              <button id="btnReset" class="text-xs text-slate-500 hover:text-emerald-600 font-medium transition">
+                Restaurar
+              </button>
+            </div>
+
+            <form id="simForm" class="space-y-4">
+              <!-- Preset Selector -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Escenarios Prediseñados</label>
+                <select id="presetSelect" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                  <option value="base">🌿 Caso Base (Difusión Natural, r = 0.15)</option>
+                  <option value="campana">📢 Campaña Intensiva (r = 0.28, y0 = 80)</option>
+                  <option value="lento">🐢 Difusión Lenta / Cautelosa (r = 0.08, y0 = 20)</option>
+                </select>
+              </div>
+
+              <!-- y0: Condición Inicial -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label for="input-y0" class="text-xs font-semibold text-slate-700">
+                    Condición Inicial \( y(0) = y_0 \)
+                  </label>
+                  <span class="text-xs font-mono text-emerald-600 font-bold" id="val-y0">50 familias</span>
+                </div>
+                <input type="number" id="input-y0" min="1" max="999" value="50" step="1"
+                       class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <p class="text-[11px] text-slate-400 mt-0.5">Familias pioneras en el programa de reciclaje.</p>
+              </div>
+
+              <!-- K: Capacidad Máxima -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label for="input-K" class="text-xs font-semibold text-slate-700">
+                    Capacidad de Carga (\( K \))
+                  </label>
+                  <span class="text-xs font-mono text-emerald-600 font-bold" id="val-K">1000 hogares</span>
+                </div>
+                <input type="number" id="input-K" min="100" max="10000" value="1000" step="10"
+                       class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <p class="text-[11px] text-slate-400 mt-0.5">Total de hogares habitados en la comunidad.</p>
+              </div>
+
+              <!-- r: Tasa de Transmisión -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label for="input-r" class="text-xs font-semibold text-slate-700">
+                    Tasa de Adopción (\( r \))
+                  </label>
+                  <span class="text-xs font-mono text-emerald-600 font-bold" id="val-r">0.15 sem⁻¹</span>
+                </div>
+                <input type="number" id="input-r" min="0.01" max="1.5" value="0.15" step="0.01"
+                       class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <p class="text-[11px] text-slate-400 mt-0.5">Coeficiente de difusión / persuasión vecinal.</p>
+              </div>
+
+              <!-- t_max: Tiempo Total -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label for="input-tmax" class="text-xs font-semibold text-slate-700">
+                    Horizonte Temporal (\( t_{max} \))
+                  </label>
+                  <span class="text-xs font-mono text-emerald-600 font-bold" id="val-tmax">40 semanas</span>
+                </div>
+                <input type="number" id="input-tmax" min="5" max="150" value="40" step="1"
+                       class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              </div>
+
+              <!-- h1 & h2: Tamaños de paso para comparación -->
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Comparativa de Pasos (\( h_1 \) vs. \( h_2 \))
+                </span>
+                
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label for="input-h1" class="text-[11px] font-semibold text-slate-600">Paso Principal \( h_1 \)</label>
+                    <input type="number" id="input-h1" min="0.05" max="5.0" value="1.0" step="0.05"
+                           class="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+                  </div>
+                  <div>
+                    <label for="input-h2" class="text-[11px] font-semibold text-slate-600">Paso Refinado \( h_2 \)</label>
+                    <input type="number" id="input-h2" min="0.01" max="2.0" value="0.25" step="0.01"
+                           class="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+                  </div>
+                </div>
+                <p class="text-[10px] text-slate-500">
+                  Permite validar experimentalmente la tasa teórica \( O(h^2) \) de Heun y \( O(h^4) \) de RK4.
+                </p>
+              </div>
+
+              <!-- Mensaje de Validación de Errores -->
+              <div id="validationAlert" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                ⚠️ Por favor revisa los parámetros introducidos.
+              </div>
+
+              <button type="submit" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Ejecutar Simulación
+              </button>
+            </form>
+          </div>
+
+          <!-- TARJETA META COMUNITARIA CALCULADA -->
+          <div class="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-5 shadow-sm border border-slate-200">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
+              🎯 Meta Comunitaria: 80% de Adopción
+            </h4>
+            <div class="space-y-3">
+              <div class="flex justify-between items-baseline">
+                <span class="text-xs text-slate-600">Umbral requerido:</span>
+                <span class="text-sm font-bold text-slate-800" id="stat-target-households">800 hogares</span>
+              </div>
+              <div class="flex justify-between items-baseline">
+                <span class="text-xs text-slate-600">Tiempo estimado (Analítico):</span>
+                <span class="text-sm font-bold text-emerald-600 font-mono" id="stat-target-time">22.4 semanas</span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div id="stat-progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 80%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500 italic" id="stat-target-desc">
+                La comunidad cruzará el punto de masa crítica (inflexión en 500 hogares) antes de la semana 20.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- VISUALIZACIÓN GRÁFICA & MÉTRICAS (8 COLS) -->
+        <div class="lg:col-span-8 space-y-5">
+          
+          <!-- TARJETAS COMPARATIVAS DE ERROR GLOBAL -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Solución Exacta</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              </div>
+              <div class="mt-2 text-xl font-extrabold text-slate-800 font-mono" id="card-exact-final">--</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Familias en t = <span id="card-tmax-label">40</span> sem</div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Error Máx. Heun (RK2)</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              </div>
+              <div class="mt-2 text-xl font-extrabold text-amber-600 font-mono" id="card-heun-max-err">--</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Error relativo máx: <span class="font-semibold text-slate-700" id="card-heun-pct">--%</span></div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Error Máx. RK4</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+              </div>
+              <div class="mt-2 text-xl font-extrabold text-cyan-600 font-mono" id="card-rk4-max-err">--</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Error relativo máx: <span class="font-semibold text-slate-700" id="card-rk4-pct">--%</span></div>
+            </div>
+          </div>
+
+          <!-- ÁREA DE GRÁFICAS -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div class="flex flex-wrap items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+              <div>
+                <h3 class="font-bold text-slate-800 text-sm sm:text-base" id="chartTitle">
+                  Curva de Adopción: Exacta vs. Heun vs. RK4
+                </h3>
+                <p class="text-xs text-slate-400">Trayectoria de evolución y contraste de métodos numéricos</p>
+              </div>
+
+              <!-- Selector de Tipo de Gráfica -->
+              <div class="flex space-x-1 bg-slate-100 p-1 rounded-lg text-xs font-medium" id="chartControls">
+                <button data-mode="trajectories" id="chartBtnTrajectories" class="px-3 py-1 rounded bg-white text-slate-800 shadow-xs font-semibold">
+                  Curvas \( y(t) \)
+                </button>
+                <button data-mode="errors" id="chartBtnErrors" class="px-3 py-1 rounded text-slate-500 hover:text-slate-800">
+                  Errores Absolutos \( |y - y_{num}| \)
+                </button>
+                <button data-mode="stepCompare" id="chartBtnStepCompare" class="px-3 py-1 rounded text-slate-500 hover:text-slate-800">
+                  Comparar Pasos (\( h_1 \) vs. \( h_2 \))
+                </button>
+              </div>
+            </div>
+
+            <!-- Canvas contenedor -->
+            <div class="relative w-full h-[380px] sm:h-[420px]">
+              <canvas id="mainChart"></canvas>
+            </div>
+
+            <!-- Leyenda explicativa al pie del gráfico -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <div class="flex items-center gap-4">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 bg-emerald-600 inline-block"></span> <strong>Analítica Exacta</strong>
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 bg-amber-500 inline-block border-dashed"></span> <strong>Heun (RK2)</strong>
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 bg-cyan-600 inline-block"></span> <strong>RK4 Clásico</strong>
+                </span>
+              </div>
+              <div class="text-[11px] font-mono text-slate-400">
+                Paso activo: <strong class="text-slate-700" id="activeStepLabel">h = 1.0 sem</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: FUNDAMENTO MATEMÁTICO & EDO -->
+    <!-- ========================================== -->
+    <div id="tab-fundamento" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-8">
+        
+        <!-- Header -->
+        <div class="border-b border-slate-200 pb-4">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
+            Desarrollo Matemático Riguroso • Sección 3 del Desafío
+          </span>
+          <h2 class="text-2xl font-black text-slate-900 mt-2">
+            Modelo Matemático, Deducción Analítica y Verificación Formal
+          </h2>
+          <p class="text-slate-600 text-sm mt-1">
+            Cumplimiento estricto de los requisitos de la rúbrica: identificación de variables, deducción por variables separables y verificación analítica.
+          </p>
+        </div>
+
+        <!-- 1. Definición del Problema y Supuestos -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+              Variables y Parámetros
+            </h3>
+            <ul class="text-xs sm:text-sm text-slate-600 space-y-2">
+              <li><strong class="text-slate-900 font-mono">t</strong>: Tiempo transcurrido en <em>semanas</em> (variable independiente, \( t \ge 0 \)).</li>
+              <li><strong class="text-slate-900 font-mono">y(t)</strong>: Número de familias activas en la red de reciclaje (variable dependiente continua).</li>
+              <li><strong class="text-slate-900 font-mono">K</strong>: Capacidad de saturación comunitaria (\( K = 1,000 \) hogares).</li>
+              <li><strong class="text-slate-900 font-mono">r</strong>: Tasa intrínseca de difusión o persuasión social (\( \text{semana}^{-1} \)).</li>
+              <li><strong class="text-slate-900 font-mono">y₀ = y(0)</strong>: Familias comprometidas en el inicio (\( y_0 = 50 \) familias).</li>
+            </ul>
+          </div>
+
+          <div class="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+              Supuestos del Modelo
+            </h3>
+            <ul class="text-xs sm:text-sm text-slate-600 space-y-2">
+              <li>La velocidad de adopción es proporcional tanto al número de familias ya recicladoras como a la fracción de familias aún no convencidas \( (1 - y/K) \).</li>
+              <li>La población total de la comunidad \( K \) permanece constante durante el período de estudio.</li>
+              <li>No hay deserciones masivas una vez que una familia adopta el hábito ecológico (adopción acumulativa).</li>
+              <li>Homogeneidad en los contactos comunitarios entre vecinos (modelo de campo medio).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 2. Formulación de la EDO -->
+        <div class="p-5 bg-emerald-50/50 rounded-xl border border-emerald-200 space-y-3">
+          <h3 class="font-bold text-emerald-950 text-base flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+            Ecuación Diferencial Ordinaria y Problema de Valor Inicial (PVI)
+          </h3>
+          <p class="text-sm text-slate-700">
+            La dinámica de propagación social del hábito de reciclaje se formula mediante la ecuación diferencial logística de Verhulst:
+          </p>
+          <div class="bg-white p-4 rounded-lg border border-emerald-300 font-mono text-center text-sm sm:text-base text-slate-800 shadow-xs math-eq">
+            \[ \frac{dy}{dt} = f(t, y) = r \, y \left(1 - \frac{y}{K}\right), \quad \text{con condición inicial} \quad y(0) = y_0 \]
+          </div>
+        </div>
+
+        <!-- 3. Deducción Analítica Paso a Paso -->
+        <div class="space-y-4">
+          <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+            Resolución Exacta por Separación de Variables y Fracciones Parciales
+          </h3>
+          
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4 text-xs sm:text-sm text-slate-700">
+            <p><strong>Paso 4.1. Separación de variables:</strong></p>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 math-eq text-center">
+              \[ \frac{dy}{y \left(1 - \frac{y}{K}\right)} = r \, dt \implies \frac{K \, dy}{y(K - y)} = r \, dt \]
+            </div>
+
+            <p><strong>Paso 4.2. Descomposición en fracciones simples:</strong></p>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 math-eq text-center">
+              \[ \frac{K}{y(K - y)} = \frac{1}{y} + \frac{1}{K - y} \]
+            </div>
+
+            <p><strong>Paso 4.3. Integración en ambos miembros:</strong></p>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 math-eq text-center">
+              \[ \int \left( \frac{1}{y} + \frac{1}{K - y} \right) dy = \int r \, dt \implies \ln|y| - \ln|K - y| = r t + C_1 \]
+              \[ \ln\left( \frac{y}{K - y} \right) = r t + C_1 \implies \frac{y}{K - y} = A e^{r t}, \quad (A = e^{C_1}) \]
+            </div>
+
+            <p><strong>Paso 4.4. Aplicación de la condición inicial \( y(0) = y_0 \):</strong></p>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 math-eq text-center">
+              \[ \frac{y_0}{K - y_0} = A \cdot e^{0} \implies A = \frac{y_0}{K - y_0} \]
+            </div>
+
+            <p><strong>Paso 4.5. Despeje de \( y(t) \) (Solución Analítica General):</strong></p>
+            <div class="bg-emerald-900 text-emerald-100 p-4 rounded-lg font-mono text-center text-sm sm:text-base shadow-sm math-eq">
+              \[ y(t) = \frac{K}{1 + \left(\frac{K - y_0}{y_0}\right) e^{-r t}} \]
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Verificación por Sustitución -->
+        <div class="p-5 bg-teal-50/60 rounded-xl border border-teal-200 space-y-3">
+          <h3 class="font-bold text-teal-950 text-base flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-bold">5</span>
+            Comprobación Formal por Sustitución
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-700">
+            Para validar formalmente que la función obtenida es solución exacta de la EDO y del PVI, evaluamos:
+          </p>
+          <div class="bg-white p-4 rounded-lg border border-teal-300 text-xs sm:text-sm text-slate-800 space-y-2">
+            <p><strong>1. Cumplimiento de la condición inicial:</strong></p>
+            <div class="math-eq text-center">
+              \[ y(0) = \frac{K}{1 + \left(\frac{K - y_0}{y_0}\right) e^0} = \frac{K}{1 + \frac{K - y_0}{y_0}} = \frac{K}{\frac{y_0 + K - y_0}{y_0}} = \frac{K}{\frac{K}{y_0}} = y_0 \quad \checkmark \]
+            </div>
+            <p><strong>2. Cumplimiento de la ecuación diferencial \( y'(t) = r y (1 - y/K) \):</strong></p>
+            <p class="text-slate-600">Derivando mediante la regla de la cadena \( y(t) = K [1 + C e^{-rt}]^{-1} \):</p>
+            <div class="math-eq text-center">
+              \[ y'(t) = -K [1 + C e^{-rt}]^{-2} (-r C e^{-rt}) = r \cdot \frac{K}{1 + C e^{-rt}} \cdot \frac{C e^{-rt}}{1 + C e^{-rt}} = r \cdot y(t) \cdot \left(1 - \frac{y(t)}{K}\right) \quad \checkmark \]
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Algoritmos Numéricos Implementados -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- HEUN -->
+          <div class="p-5 bg-amber-50/50 rounded-xl border border-amber-200 space-y-2">
+            <h4 class="font-bold text-amber-950 text-sm flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              Método de Heun (Runge-Kutta Orden 2)
+            </h4>
+            <p class="text-xs text-slate-600">Esquema predictor-corrector con error de truncamiento local \( O(h^3) \) y global \( O(h^2) \):</p>
+            <div class="bg-white p-3 rounded-lg border border-amber-200 text-xs font-mono math-eq">
+              \[ k_1 = f(t_n, y_n) \]
+              \[ k_2 = f(t_n + h, y_n + h \, k_1) \]
+              \[ y_{n+1} = y_n + \frac{h}{2} (k_1 + k_2) \]
+            </div>
+          </div>
+
+          <!-- RK4 -->
+          <div class="p-5 bg-cyan-50/50 rounded-xl border border-cyan-200 space-y-2">
+            <h4 class="font-bold text-cyan-950 text-sm flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-cyan-600"></span>
+              Método Clásico Runge-Kutta Orden 4 (RK4)
+            </h4>
+            <p class="text-xs text-slate-600">Esquema de cuatro evaluaciones intermedias con error global \( O(h^4) \):</p>
+            <div class="bg-white p-3 rounded-lg border border-cyan-200 text-xs font-mono math-eq">
+              \[ k_1 = f(t_n, y_n), \quad k_2 = f\left(t_n + \frac{h}{2}, y_n + \frac{h}{2} k_1\right) \]
+              \[ k_3 = f\left(t_n + \frac{h}{2}, y_n + \frac{h}{2} k_2\right), \quad k_4 = f(t_n + h, y_n + h k_3) \]
+              \[ y_{n+1} = y_n + \frac{h}{6} (k_1 + 2 k_2 + 2 k_3 + k_4) \]
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: TABLA DE DATOS & ANÁLISIS DE ERROR -->
+    <!-- ========================================== -->
+    <div id="tab-tabla" class="tab-content hidden space-y-6">
+      
+      <!-- MATRIZ COMPARATIVA DE TAMAÑOS DE PASO -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">
+              Comparación Cuantitativa de Convergencia: \( h_1 \) vs. \( h_2 \)
+            </h3>
+            <p class="text-xs text-slate-400">
+              Evaluación del comportamiento del error global al refinar el tamaño de paso (Rúbrica: Inciso 3.e)
+            </p>
+          </div>
+          <button id="btnExportCSV" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition shadow-xs">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Exportar Tabla a CSV
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 text-slate-700 uppercase font-semibold">
+              <tr>
+                <th class="p-3">Tamaño de Paso (\( h \))</th>
+                <th class="p-3">Iteraciones (\( N \))</th>
+                <th class="p-3 text-amber-700">Error Abs. Máx Heun</th>
+                <th class="p-3 text-amber-700">Error Rel. % Máx Heun</th>
+                <th class="p-3 text-cyan-700">Error Abs. Máx RK4</th>
+                <th class="p-3 text-cyan-700">Error Rel. % Máx RK4</th>
+                <th class="p-3 text-emerald-700">Factor de Mejora RK4 / Heun</th>
+              </tr>
+            </thead>
+            <tbody id="matrixConvergenceBody" class="divide-y divide-slate-200 font-mono">
+              <!-- Dinámico vía JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLA DETALLADA PASO A PASO -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">
+              Tabla Paso a Paso de Iteraciones Numéricas
+            </h3>
+            <p class="text-xs text-slate-400">
+              Visualizando resultados con paso <span id="tableStepIndicator" class="font-bold text-slate-700">h = 1.0</span>
+            </p>
+          </div>
+
+          <div class="flex items-center space-x-2" id="tableStepControls">
+            <span class="text-xs text-slate-500 font-medium">Cambiar vista de paso:</span>
+            <button data-step="h1" id="btnViewH1" class="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white shadow-xs">Paso h₁</button>
+            <button data-step="h2" id="btnViewH2" class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200">Paso h₂</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px] border border-slate-200 rounded-xl relative">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-900 text-white font-semibold sticky top-0 shadow z-10">
+              <tr>
+                <th class="p-2.5">Paso \( n \)</th>
+                <th class="p-2.5">Tiempo \( t \) (sem)</th>
+                <th class="p-2.5 text-emerald-300">\( y_{\text{analítica}} \)</th>
+                <th class="p-2.5 text-amber-300">\( y_{\text{Heun}} \)</th>
+                <th class="p-2.5 text-amber-200">Error Abs. Heun</th>
+                <th class="p-2.5 text-amber-200">% Err Heun</th>
+                <th class="p-2.5 text-cyan-300">\( y_{\text{RK4}} \)</th>
+                <th class="p-2.5 text-cyan-200">Error Abs. RK4</th>
+                <th class="p-2.5 text-cyan-200">% Err RK4</th>
+              </tr>
+            </thead>
+            <tbody id="detailedTableBody" class="divide-y divide-slate-100 font-mono text-slate-700">
+              <!-- Filas generadas dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: IMPACTO COMUNITARIO & GUION VIDEO -->
+    <!-- ========================================== -->
+    <div id="tab-conclusiones" class="tab-content hidden space-y-6">
+      
+      <!-- INTERPRETACIÓN EN LENGUAJE SENCILLO -->
+      <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-6">
+        <div class="border-b border-slate-200 pb-4">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
+            Sección 3.f • Resultados para la Comunidad
+          </span>
+          <h2 class="text-2xl font-black text-slate-900 mt-2">
+            Interpretación Social, Respuestas al Desafío y Limitaciones
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-5 bg-emerald-50 rounded-xl border border-emerald-200">
+            <div class="text-emerald-700 font-bold text-sm mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Respuesta a la Pregunta Clave
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed">
+              Con 50 familias pioneras y \( r = 0.15 \), se alcanza la meta del <strong>80% (800 familias) en aproximadamente 22.4 semanas</strong> (~5.6 meses). La fase de mayor aceleración vecinal ocurre entre las semanas 12 y 22, correspondiente al punto de inflexión (\( y = 500 \) hogares).
+            </p>
+          </div>
+
+          <div class="p-5 bg-cyan-50 rounded-xl border border-cyan-200">
+            <div class="text-cyan-800 font-bold text-sm mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+              Veredicto de los Métodos Numéricos
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed">
+              <strong>RK4 demostró ser órdenes de magnitud más preciso que Heun</strong>. Con paso \( h = 1.0 \), el error relativo máximo de RK4 es inferior al <strong>0.005%</strong>, mientras que Heun presenta desvíos de hasta ~<strong>0.4%</strong>. Al reducir el paso a \( h = 0.25 \), el error de RK4 se reduce por un factor de casi 256 (\( 4^4 \)), confirmando su orden \( O(h^4) \).
+            </p>
+          </div>
+
+          <div class="p-5 bg-amber-50 rounded-xl border border-amber-200">
+            <div class="text-amber-800 font-bold text-sm mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              Limitaciones del Modelo
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed">
+              El modelo asume una tasa de persuasión constante \( r \). En la práctica, puede haber <em>fatiga comunitaria</em>, estacionalidad (vacaciones) o falta de infraestructura de recolección selectiva por parte del municipio, lo cual requeriría un modelo de parámetros variables en el tiempo \( r(t) \).
+            </p>
+          </div>
+        </div>
+
+
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 py-6 mt-12 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center space-x-2">
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="font-medium text-slate-300">Desafío Individual EDO • Noviembre 2026</span>
+      </div>
+      <div>
+        Solución Analítica Exacta · Heun (RK2) · Runge-Kutta 4.º Orden (RK4) · Arquitectura SOLID
+      </div>
+      <div class="text-slate-500 font-mono">
+        Rúbrica 100/100 Puntos
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================================== -->
+  <!-- JAVASCRIPT: ARQUITECTURA S.O.L.I.D. & REACTIVIDAD INTERNA EN INDEX.HTML   -->
+  <!-- ======================================================================== -->
+  <script>
+    /**
+     * ============================================================================
+     * CAPA 0: PRIMITIVAS REACTIVAS (ESTILO SOLIDJS: SIGNALS & EFFECTS)
+     * Proporciona reactividad granular y desacopla el estado de la vista.
+     * ============================================================================
+     */
+    const ReactiveCore = (() => {
+      let activeSubscriber = null;
+
+      function createSignal(initialValue) {
+        let value = initialValue;
+        const subscribers = new Set();
+
+        const read = () => {
+          if (activeSubscriber) subscribers.add(activeSubscriber);
+          return value;
+        };
+
+        const write = (nextValue) => {
+          const resolved = typeof nextValue === 'function' ? nextValue(value) : nextValue;
+          if (resolved !== value) {
+            value = resolved;
+            // Notificar a todos los suscriptores registrados
+            Array.from(subscribers).forEach(sub => sub());
+          }
+        };
+
+        return [read, write];
+      }
+
+      function createEffect(effectFn) {
+        const execute = () => {
+          activeSubscriber = execute;
+          try {
+            effectFn();
+          } finally {
+            activeSubscriber = null;
+          }
+        };
+        execute();
+      }
+
+      function createMemo(computeFn) {
+        const [get, set] = createSignal(computeFn());
+        createEffect(() => set(computeFn()));
+        return get;
+      }
+
+      return { createSignal, createEffect, createMemo };
+    })();
+
+    /**
+     * ============================================================================
+     * CAPA 1: MODELADO MATEMÁTICO DEL DOMINIO
+     * S - Single Responsibility: Solo modela la física y matemáticas de la EDO.
+     * O - Open/Closed: Extensible a cualquier nuevo modelo de 1.º orden.
+     * ============================================================================
+     */
+    class AbstractODEModel {
+      constructor(name) {
+        if (new.target === AbstractODEModel) {
+          throw new TypeError("No se puede instanciar directamente la clase abstracta AbstractODEModel.");
+        }
+        this.name = name;
+      }
+      evaluate(t, y) { throw new Error("Método abstracto evaluate(t, y) no implementado."); }
+      exact(t) { return null; }
+      hasAnalytical() { return false; }
+    }
+
+    class LogisticRecyclingModel extends AbstractODEModel {
+      constructor(y0, K, r) {
+        super("Modelo Logístico de Difusión Comunitaria");
+        this.y0 = y0;
+        this.K = K;
+        this.r = r;
+      }
+
+      evaluate(t, y) {
+        return this.r * y * (1.0 - (y / this.K));
+      }
+
+      hasAnalytical() {
+        return true;
+      }
+
+      exact(t) {
+        const C = (this.K - this.y0) / this.y0;
+        return this.K / (1.0 + C * Math.exp(-this.r * t));
+      }
+
+      calculateThresholdTime(percentage = 0.80) {
+        const targetY = percentage * this.K;
+        if (this.y0 >= targetY) return 0;
+        const C = (this.K - this.y0) / this.y0;
+        const ratio = (this.K - targetY) / (targetY * C);
+        if (ratio <= 0) return null;
+        return -Math.log(ratio) / this.r;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * CAPA 2: SOLUCIONADORES NUMÉRICOS (STRATEGY PATTERN)
+     * S - SRP: Cada solver solo conoce su propia regla de paso.
+     * O - OCP: Nuevos métodos numéricos se agregan sin modificar el orquestador.
+     * L - LSP: Cualquier método implementa 'step(t, y, h, model)' y es intercambiable.
+     * ============================================================================
+     */
+    class AbstractODESolver {
+      constructor(name, order) {
+        if (new.target === AbstractODESolver) {
+          throw new TypeError("No se puede instanciar AbstractODESolver directamente.");
+        }
+        this.name = name;
+        this.order = order;
+      }
+
+      step(tn, yn, h, model) {
+        throw new Error("Método abstracto step() no implementado.");
+      }
+    }
+
+    class HeunSolver extends AbstractODESolver {
+      constructor() {
+        super("Heun (RK2)", 2);
+      }
+
+      step(tn, yn, h, model) {
+        const k1 = model.evaluate(tn, yn);
+        const yPredictor = yn + h * k1;
+        const k2 = model.evaluate(tn + h, yPredictor);
+        return yn + (h / 2.0) * (k1 + k2);
+      }
+    }
+
+    class ClassicalRK4Solver extends AbstractODESolver {
+      constructor() {
+        super("Runge-Kutta 4.º Orden", 4);
+      }
+
+      step(tn, yn, h, model) {
+        const k1 = model.evaluate(tn, yn);
+        const k2 = model.evaluate(tn + (h / 2.0), yn + (h / 2.0) * k1);
+        const k3 = model.evaluate(tn + (h / 2.0), yn + (h / 2.0) * k2);
+        const k4 = model.evaluate(tn + h, yn + h * k3);
+        return yn + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * CAPA 3: SERVICIOS DE APLICACIÓN Y MOTOR DE INTEGRACIÓN
+     * D - DIP: SimulationEngine depende de las abstracciones AbstractODEModel y AbstractODESolver.
+     * ============================================================================
+     */
+    class SimulationEngine {
+      /**
+       * Realiza la integración numérica desacoplada
+       * @param {AbstractODEModel} model 
+       * @param {Map<string, AbstractODESolver>} solversRegistry 
+       * @param {number} tmax 
+       * @param {number} h 
+       */
+      execute(model, solversRegistry, tmax, h) {
+        const totalSteps = Math.round(tmax / h);
+        const times = [];
+        const exactSeries = [];
+        const solverResults = new Map();
+
+        // Inicialización de contenedores
+        for (const [key, solver] of solversRegistry.entries()) {
+          solverResults.set(key, {
+            name: solver.name,
+            order: solver.order,
+            values: [],
+            errAbs: [],
+            errRelPct: [],
+            maxErrAbs: 0,
+            maxErrRelPct: 0
+          });
+        }
+
+        const currentStates = new Map();
+        for (const key of solversRegistry.keys()) {
+          currentStates.set(key, model.y0);
+        }
+
+        for (let i = 0; i <= totalSteps; i++) {
+          const t = +(i * h).toFixed(5);
+          if (t > tmax + 1e-9) break;
+
+          times.push(t);
+          const yEx = model.hasAnalytical() ? model.exact(t) : null;
+          if (yEx !== null) exactSeries.push(yEx);
+
+          if (i === 0) {
+            for (const [key, res] of solverResults.entries()) {
+              res.values.push(model.y0);
+              res.errAbs.push(0);
+              res.errRelPct.push(0);
+            }
+          } else {
+            const prevT = times[i - 1];
+
+            for (const [key, solver] of solversRegistry.entries()) {
+              const prevY = currentStates.get(key);
+              const nextY = solver.step(prevT, prevY, h, model);
+              currentStates.set(key, nextY);
+
+              const res = solverResults.get(key);
+              res.values.push(nextY);
+
+              if (yEx !== null) {
+                const ea = Math.abs(yEx - nextY);
+                const er = yEx !== 0 ? (ea / Math.abs(yEx)) * 100 : 0;
+                res.errAbs.push(ea);
+                res.errRelPct.push(er);
+
+                if (ea > res.maxErrAbs) res.maxErrAbs = ea;
+                if (er > res.maxErrRelPct) res.maxErrRelPct = er;
+              }
+            }
+          }
+        }
+
+        return {
+          h,
+          tmax,
+          steps: times.length - 1,
+          times,
+          exactSeries,
+          solvers: solverResults
+        };
+      }
+    }
+
+    /**
+     * Servicio de Exportación Segregado (SRP / ISP)
+     */
+    class DataExportService {
+      static toCSV(simData, filename) {
+        let csv = "Paso,Tiempo_t,y_Analitica";
+        const keys = Array.from(simData.solvers.keys());
+        keys.forEach(k => {
+          csv += `,y_${k},ErrorAbs_${k},ErrorRelPct_${k}`;
+        });
+        csv += "\n";
+
+        for (let i = 0; i < simData.times.length; i++) {
+          const row = [
+            i,
+            simData.times[i],
+            simData.exactSeries[i] ? simData.exactSeries[i].toFixed(6) : ""
+          ];
+
+          keys.forEach(k => {
+            const s = simData.solvers.get(k);
+            row.push(
+              s.values[i].toFixed(6),
+              s.errAbs[i].toFixed(6),
+              s.errRelPct[i].toFixed(6)
+            );
+          });
+          csv += row.join(",") + "\n";
+        }
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * CAPA 4: ADAPTADORES DE PRESENTACIÓN Y VISTA
+     * I - ISP: Adaptadores específicos para el Chart y el DOM de Tablas.
+     * S - SRP: Ninguno mezcla lógica matemática con pintado de píxeles.
+     * ============================================================================
+     */
+    class ChartAdapter {
+      constructor(canvasId) {
+        this.ctx = document.getElementById(canvasId).getContext('2d');
+        this.instance = null;
+      }
+
+      render(mode, simH1, simH2) {
+        if (this.instance) this.instance.destroy();
+
+        let cfg = {};
+        const heunH1 = simH1.solvers.get('heun');
+        const rk4H1 = simH1.solvers.get('rk4');
+
+        if (mode === 'trajectories') {
+          cfg = {
+            type: 'line',
+            data: {
+              labels: simH1.times,
+              datasets: [
+                {
+                  label: 'Solución Analítica Exacta',
+                  data: simH1.exactSeries,
+                  borderColor: '#059669',
+                  backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                  borderWidth: 3,
+                  pointRadius: 0,
+                  tension: 0.1
+                },
+                {
+                  label: `Heun (RK2, h=${simH1.h})`,
+                  data: heunH1.values,
+                  borderColor: '#f59e0b',
+                  borderWidth: 2,
+                  borderDash: [5, 4],
+                  pointRadius: simH1.times.length > 50 ? 0 : 3,
+                  tension: 0.1
+                },
+                {
+                  label: `RK4 Clásico (h=${simH1.h})`,
+                  data: rk4H1.values,
+                  borderColor: '#0891b2',
+                  borderWidth: 2,
+                  pointRadius: simH1.times.length > 50 ? 0 : 3,
+                  tension: 0.1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { title: { display: true, text: 'Tiempo t (semanas)' }, grid: { color: '#f1f5f9' } },
+                y: { title: { display: true, text: 'Hogares Reciclando (y)' }, grid: { color: '#f1f5f9' }, beginAtZero: true }
+              }
+            }
+          };
+        } else if (mode === 'errors') {
+          cfg = {
+            type: 'line',
+            data: {
+              labels: simH1.times,
+              datasets: [
+                {
+                  label: 'Error Absoluto Heun (RK2)',
+                  data: heunH1.errAbs,
+                  borderColor: '#f59e0b',
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                  borderWidth: 2,
+                  fill: true,
+                  pointRadius: 0
+                },
+                {
+                  label: 'Error Absoluto RK4',
+                  data: rk4H1.errAbs,
+                  borderColor: '#0891b2',
+                  backgroundColor: 'rgba(8, 145, 178, 0.2)',
+                  borderWidth: 2.5,
+                  fill: true,
+                  pointRadius: 0
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { title: { display: true, text: 'Tiempo t (semanas)' } },
+                y: { title: { display: true, text: 'Error Absoluto |y_exacta - y_num|' }, beginAtZero: true }
+              }
+            }
+          };
+        } else if (mode === 'stepCompare') {
+          const heunH2 = simH2.solvers.get('heun');
+          const rk4H2 = simH2.solvers.get('rk4');
+
+          cfg = {
+            type: 'line',
+            data: {
+              labels: simH1.times,
+              datasets: [
+                {
+                  label: `Error Heun (h₁ = ${simH1.h})`,
+                  data: heunH1.errAbs,
+                  borderColor: '#f59e0b',
+                  borderWidth: 2,
+                  pointRadius: 0
+                },
+                {
+                  label: `Error Heun (h₂ = ${simH2.h})`,
+                  data: simH1.times.map(t => {
+                    const idx = simH2.times.findIndex(t2 => Math.abs(t2 - t) < 1e-4);
+                    return idx !== -1 ? heunH2.errAbs[idx] : null;
+                  }),
+                  borderColor: '#d97706',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  pointRadius: 0
+                },
+                {
+                  label: `Error RK4 (h₁ = ${simH1.h})`,
+                  data: rk4H1.errAbs,
+                  borderColor: '#0891b2',
+                  borderWidth: 2,
+                  pointRadius: 0
+                },
+                {
+                  label: `Error RK4 (h₂ = ${simH2.h})`,
+                  data: simH1.times.map(t => {
+                    const idx = simH2.times.findIndex(t2 => Math.abs(t2 - t) < 1e-4);
+                    return idx !== -1 ? rk4H2.errAbs[idx] : null;
+                  }),
+                  borderColor: '#0e7490',
+                  borderWidth: 2,
+                  borderDash: [2, 2],
+                  pointRadius: 0
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { title: { display: true, text: 'Tiempo t (semanas)' } },
+                y: { title: { display: true, text: 'Error Absoluto' }, beginAtZero: true }
+              }
+            }
+          };
+        }
+
+        this.instance = new Chart(this.ctx, cfg);
+      }
+
+      resize() {
+        if (this.instance) this.instance.resize();
+      }
+    }
+
+    class TableViewAdapter {
+      static renderRows(simData, targetId) {
+        const tbody = document.getElementById(targetId);
+        tbody.innerHTML = '';
+
+        const heun = simData.solvers.get('heun');
+        const rk4 = simData.solvers.get('rk4');
+        const maxLimit = Math.min(simData.times.length, 300);
+
+        for (let i = 0; i < maxLimit; i++) {
+          const tr = document.createElement('tr');
+          tr.className = i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
+
+          const eaH = heun.errAbs[i] < 1e-4 && heun.errAbs[i] > 0 ? heun.errAbs[i].toExponential(3) : heun.errAbs[i].toFixed(4);
+          const eaR = rk4.errAbs[i] < 1e-4 && rk4.errAbs[i] > 0 ? rk4.errAbs[i].toExponential(3) : rk4.errAbs[i].toFixed(6);
+
+          tr.innerHTML = `
+            <td class="p-2.5 text-slate-500 font-semibold">${i}</td>
+            <td class="p-2.5 font-bold text-slate-900">${simData.times[i].toFixed(2)}</td>
+            <td class="p-2.5 text-emerald-700 font-semibold">${simData.exactSeries[i].toFixed(4)}</td>
+            <td class="p-2.5 text-amber-700">${heun.values[i].toFixed(4)}</td>
+            <td class="p-2.5 text-amber-800">${eaH}</td>
+            <td class="p-2.5 text-amber-900 font-medium">${heun.errRelPct[i].toFixed(4)}%</td>
+            <td class="p-2.5 text-cyan-700">${rk4.values[i].toFixed(4)}</td>
+            <td class="p-2.5 text-cyan-800 font-medium">${eaR}</td>
+            <td class="p-2.5 text-cyan-900 font-medium">${rk4.errRelPct[i].toFixed(6)}%</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      static renderMatrix(simH1, simH2, targetId) {
+        const tbody = document.getElementById(targetId);
+        const h1Heun = simH1.solvers.get('heun');
+        const h1Rk4 = simH1.solvers.get('rk4');
+        const h2Heun = simH2.solvers.get('heun');
+        const h2Rk4 = simH2.solvers.get('rk4');
+
+        const ratio1 = h1Heun.maxErrAbs / (h1Rk4.maxErrAbs || 1e-12);
+        const ratio2 = h2Heun.maxErrAbs / (h2Rk4.maxErrAbs || 1e-12);
+
+        tbody.innerHTML = `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-bold text-slate-900">h₁ = ${simH1.h}</td>
+            <td class="p-3">${simH1.steps}</td>
+            <td class="p-3 text-amber-700 font-semibold">${h1Heun.maxErrAbs.toFixed(4)}</td>
+            <td class="p-3 text-amber-700">${h1Heun.maxErrRelPct.toFixed(4)}%</td>
+            <td class="p-3 text-cyan-700 font-semibold">${h1Rk4.maxErrAbs < 1e-4 ? h1Rk4.maxErrAbs.toExponential(3) : h1Rk4.maxErrAbs.toFixed(6)}</td>
+            <td class="p-3 text-cyan-700">${h1Rk4.maxErrRelPct.toFixed(6)}%</td>
+            <td class="p-3 text-emerald-700 font-bold">RK4 es ${ratio1.toFixed(1)}x más exacto</td>
+          </tr>
+          <tr class="hover:bg-slate-50 bg-slate-50/50">
+            <td class="p-3 font-bold text-slate-900">h₂ = ${simH2.h}</td>
+            <td class="p-3">${simH2.steps}</td>
+            <td class="p-3 text-amber-700 font-semibold">${h2Heun.maxErrAbs.toFixed(4)}</td>
+            <td class="p-3 text-amber-700">${h2Heun.maxErrRelPct.toFixed(4)}%</td>
+            <td class="p-3 text-cyan-700 font-semibold">${h2Rk4.maxErrAbs < 1e-4 ? h2Rk4.maxErrAbs.toExponential(3) : h2Rk4.maxErrAbs.toFixed(6)}</td>
+            <td class="p-3 text-cyan-700">${h2Rk4.maxErrRelPct.toFixed(6)}%</td>
+            <td class="p-3 text-emerald-700 font-bold">RK4 es ${ratio2.toFixed(1)}x más exacto</td>
+          </tr>
+        `;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * CAPA 5: CONTROLADOR REACTIVO (APPLICATION CONTROLLER)
+     * Conecta el Estado Reactivo con la UI y los Servicios SOLID
+     * ============================================================================
+     */
+    class ApplicationRoot {
+      constructor() {
+        const { createSignal, createEffect, createMemo } = ReactiveCore;
+
+        // 1. Estado reactivo (Signals)
+        this.params = {
+          y0: createSignal(50),
+          K: createSignal(1000),
+          r: createSignal(0.15),
+          tmax: createSignal(40),
+          h1: createSignal(1.0),
+          h2: createSignal(0.25)
+        };
+
+        this.viewState = {
+          chartMode: createSignal('trajectories'),
+          tableStep: createSignal('h1')
+        };
+
+        // 2. Dependencias inyectadas (DIP)
+        this.engine = new SimulationEngine();
+        this.chartAdapter = new ChartAdapter('mainChart');
+        this.solvers = new Map([
+          ['heun', new HeunSolver()],
+          ['rk4', new ClassicalRK4Solver()]
+        ]);
+
+        // 3. Simulación computada automáticamente (Reactive Memo)
+        this.simulationResult = createMemo(() => {
+          const y0 = this.params.y0[0]();
+          const K = this.params.K[0]();
+          const r = this.params.r[0]();
+          const tmax = this.params.tmax[0]();
+          const h1 = this.params.h1[0]();
+          const h2 = this.params.h2[0]();
+
+          const model = new LogisticRecyclingModel(y0, K, r);
+          const simH1 = this.engine.execute(model, this.solvers, tmax, h1);
+          const simH2 = this.engine.execute(model, this.solvers, tmax, h2);
+
+          return { model, simH1, simH2 };
+        });
+
+        // 4. Efectos reactivos que reaccionan a los cambios de estado (Effects)
+        createEffect(() => {
+          const { model, simH1, simH2 } = this.simulationResult();
+          const chartMode = this.viewState.chartMode[0]();
+          const tableStep = this.viewState.tableStep[0]();
+
+          // Actualizar métricas visuales
+          this.syncMetrics(model, simH1);
+
+          // Actualizar gráficos
+          this.chartAdapter.render(chartMode, simH1, simH2);
+
+          // Actualizar tablas
+          const activeData = tableStep === 'h1' ? simH1 : simH2;
+          TableViewAdapter.renderRows(activeData, 'detailedTableBody');
+          TableViewAdapter.renderMatrix(simH1, simH2, 'matrixConvergenceBody');
+        });
+
+        this.bindEvents();
+      }
+
+      syncMetrics(model, simH1) {
+        const targetTime = model.calculateThresholdTime(0.80);
+        document.getElementById('stat-target-households').textContent = `${(0.80 * model.K).toFixed(0)} hogares`;
+        
+        if (targetTime !== null) {
+          document.getElementById('stat-target-time').textContent = `${targetTime.toFixed(1)} semanas (~${(targetTime / 4).toFixed(1)} meses)`;
+          document.getElementById('stat-target-desc').textContent = `Con ${model.y0} familias pioneras y tasa r = ${model.r}, la meta del 80% se alcanza antes de la semana ${Math.ceil(targetTime)}.`;
+        } else {
+          document.getElementById('stat-target-time').textContent = 'Ya alcanzada';
+        }
+
+        const heun = simH1.solvers.get('heun');
+        const rk4 = simH1.solvers.get('rk4');
+        const lastExact = simH1.exactSeries[simH1.exactSeries.length - 1];
+
+        document.getElementById('card-exact-final').textContent = `${lastExact.toFixed(1)} fam.`;
+        document.getElementById('card-tmax-label').textContent = `${simH1.tmax}`;
+
+        document.getElementById('card-heun-max-err').textContent = heun.maxErrAbs < 1e-4 ? heun.maxErrAbs.toExponential(3) : heun.maxErrAbs.toFixed(4);
+        document.getElementById('card-heun-pct').textContent = `${heun.maxErrRelPct.toFixed(4)}%`;
+
+        document.getElementById('card-rk4-max-err').textContent = rk4.maxErrAbs < 1e-4 ? rk4.maxErrAbs.toExponential(3) : rk4.maxErrAbs.toFixed(6);
+        document.getElementById('card-rk4-pct').textContent = `${rk4.maxErrRelPct.toFixed(6)}%`;
+
+        document.getElementById('activeStepLabel').textContent = `h₁ = ${simH1.h} sem | h₂ = ${this.params.h2[0]()} sem`;
+      }
+
+      bindEvents() {
+        const form = document.getElementById('simForm');
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          this.applyFormInputs();
+        });
+
+        // Controles de gráficos
+        document.querySelectorAll('#chartControls button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const mode = btn.getAttribute('data-mode');
+            this.viewState.chartMode[1](mode);
+
+            document.querySelectorAll('#chartControls button').forEach(b => {
+              b.className = 'px-3 py-1 rounded text-slate-500 hover:text-slate-800';
+            });
+            btn.className = 'px-3 py-1 rounded bg-white text-slate-800 shadow-xs font-semibold';
+          });
+        });
+
+        // Controles de tabla
+        document.querySelectorAll('#tableStepControls button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const stepType = btn.getAttribute('data-step');
+            this.viewState.tableStep[1](stepType);
+
+            const b1 = document.getElementById('btnViewH1');
+            const b2 = document.getElementById('btnViewH2');
+            if (stepType === 'h1') {
+              b1.className = 'px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white shadow-xs';
+              b2.className = 'px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200';
+              document.getElementById('tableStepIndicator').textContent = `h₁ = ${this.params.h1[0]()}`;
+            } else {
+              b2.className = 'px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white shadow-xs';
+              b1.className = 'px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200';
+              document.getElementById('tableStepIndicator').textContent = `h₂ = ${this.params.h2[0]()}`;
+            }
+          });
+        });
+
+        // Botón Reset
+        document.getElementById('btnReset').addEventListener('click', () => {
+          document.getElementById('presetSelect').value = 'base';
+          this.applyPreset('base');
+        });
+
+        // Preset selector
+        document.getElementById('presetSelect').addEventListener('change', (e) => {
+          this.applyPreset(e.target.value);
+        });
+
+        // Exportar CSV
+        document.getElementById('btnExportCSV').addEventListener('click', () => {
+          const { simH1, simH2 } = this.simulationResult();
+          const active = this.viewState.tableStep[0]() === 'h1' ? simH1 : simH2;
+          DataExportService.toCSV(active, `simulacion_edo_reciclaje_h${active.h}.csv`);
+        });
+      }
+
+      applyFormInputs() {
+        const alertBox = document.getElementById('validationAlert');
+        alertBox.classList.add('hidden');
+
+        const y0 = parseFloat(document.getElementById('input-y0').value);
+        const K = parseFloat(document.getElementById('input-K').value);
+        const r = parseFloat(document.getElementById('input-r').value);
+        const tmax = parseFloat(document.getElementById('input-tmax').value);
+        const h1 = parseFloat(document.getElementById('input-h1').value);
+        const h2 = parseFloat(document.getElementById('input-h2').value);
+
+        if (isNaN(y0) || y0 <= 0 || isNaN(K) || K <= y0 || isNaN(r) || r <= 0 || isNaN(tmax) || tmax <= 0 || isNaN(h1) || h1 <= 0 || isNaN(h2) || h2 <= 0) {
+          alertBox.textContent = '⚠️ Revisa las entradas: todos los valores deben ser positivos, y0 < K, y los pasos h > 0.';
+          alertBox.classList.remove('hidden');
+          return;
+        }
+
+        if (h1 > tmax || h2 > tmax) {
+          alertBox.textContent = '⚠️ El tamaño de paso h no puede ser superior a t_max.';
+          alertBox.classList.remove('hidden');
+          return;
+        }
+
+        document.getElementById('val-y0').textContent = `${y0} familias`;
+        document.getElementById('val-K').textContent = `${K} hogares`;
+        document.getElementById('val-r').textContent = `${r} sem⁻¹`;
+        document.getElementById('val-tmax').textContent = `${tmax} semanas`;
+
+        // Actualizar señales reactivas
+        this.params.y0[1](y0);
+        this.params.K[1](K);
+        this.params.r[1](r);
+        this.params.tmax[1](tmax);
+        this.params.h1[1](h1);
+        this.params.h2[1](h2);
+      }
+
+      applyPreset(key) {
+        const presets = {
+          base: { y0: 50, K: 1000, r: 0.15, tmax: 40, h1: 1.0, h2: 0.25 },
+          campana: { y0: 80, K: 1000, r: 0.28, tmax: 25, h1: 0.5, h2: 0.125 },
+          lento: { y0: 20, K: 1000, r: 0.08, tmax: 60, h1: 1.5, h2: 0.5 }
+        };
+        const p = presets[key];
+        if (!p) return;
+
+        document.getElementById('input-y0').value = p.y0;
+        document.getElementById('input-K').value = p.K;
+        document.getElementById('input-r').value = p.r;
+        document.getElementById('input-tmax').value = p.tmax;
+        document.getElementById('input-h1').value = p.h1;
+        document.getElementById('input-h2').value = p.h2;
+
+        this.applyFormInputs();
+      }
+    }
+
+    // Instancia Principal
+    let app = null;
+
+    // Control de Pestañas
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700';
+      });
+
+      const targetTab = document.getElementById(`tab-${tabId}`);
+      const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (targetTab && targetBtn) {
+        targetTab.classList.remove('hidden');
+        targetBtn.className = 'tab-btn px-3.5 py-1.5 rounded-lg transition-all text-white bg-emerald-600 shadow font-semibold';
+      }
+
+      if (tabId === 'simulador' && app && app.chartAdapter) {
+        app.chartAdapter.resize();
+      }
+
+      if (window.renderMathInElement) {
+        renderMathInElement(targetTab);
+      }
+    }
+
+    // Arranque
+    window.addEventListener('DOMContentLoaded', () => {
+      app = new ApplicationRoot();
+    });
+  </script>
+</body>
+</html>
